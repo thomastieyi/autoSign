@@ -1,16 +1,29 @@
-# autoSign
-校园网自动登陆脚本
-## 适用于北京科技大学校园网自动登陆脚本
-### needed：node.js+npm
+# NodeJS 爬虫
+
+校园图书馆书籍信息爬取脚本
+
+## 校园图书馆书籍信息爬取脚本
+
+### needed：node.js+npm+mongondb
+
+### 原理：
+
+1. 利用 http 请求获取校园图书馆的网站
+2. 利用`cherrIO`实现对网站的解析，并获取书籍信息
+3. 利用`mongoDB`实现信息储存
 
 ### Useage:
 
-1. `git clone`
+1. 安装[`mongoDB`](https://www.mongodb.com/download-center)
 
-2. `cd autoSign`
+2. `git clone`
 
-3. change config.json to your own info
+3. `cd autoSign`
 
-4. `sudo npm install && sudo npm run init && sudo npm run prod`
+4. `npm install`
 
-5. or just for dev`sudo npm run dev`
+5. `npm run dev`
+
+6. DONE
+
+### Result:
