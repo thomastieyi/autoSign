@@ -26,4 +26,4 @@
 
 6. DONE
 
-### Result:
+### Result: [`Result`]('./result.json')
