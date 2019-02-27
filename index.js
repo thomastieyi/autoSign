@@ -1,52 +1,73 @@
-let Iconv = require('iconv-lite');
-let request = require('request')
-let config = require('./config')
-const chalk = require('chalk');
-const options = {
-    method: 'get',
-    url: config.URL,
-    encoding: null,
+var cheerio = require("cheerio");
+var http = require("http");
+var schedule = require("node-schedule");
+const monk = require('monk');
+const url1 = 'localhost:27017/books';
+const db = monk(url1);
+var url = "http://lib1.ustb.edu.cn:8080/opac/item.php?marc_no=000"
+let begin = "";
+const download = (url, callback) => {
+    http.get(url, function (res) {
+        var data = "";
+        res.on('data', function (chunk) {
+            data += chunk;
+        });
+        res.on("end", function () {
+            callback(data);
+        });
+    }).on("error", function () {
+        callback(null);
+    });
 }
-const {
-    exec
-} = require('child_process');
-exec('curl http://202.204.48.66 -X POST -d "DDDDD=' + config.userName + '&upass=' + config.password + '&v6ip=&0MKKey=123456789"|iconv -f gb2312 -t utf-8', (err, stdout, stderr) => {
-    if (err) {
-        console.log(err);
-        return;
+const add = (i) => {
+    let a = '';
+    a = a + i;
+    let buf = a
+    for (let j = 7; j > a.length; j--) {
+        buf = '0' + buf;
     }
-    if (stdout.indexOf('您已经成功登录') != -1) {
-        console.log(chalk.green('successful login'))
-
-    } else {
-        console.error(chalk.red('you have no fee or worng argments'))
-    }
-})
-let schedule = require('node-schedule');
-scheduleCronstyle = () => {
+    return buf
+}
+const scheduleCronstyle = () => {
+    //     //每分钟的第30秒定时执行一次:
+    let j = 0
     schedule.scheduleJob('30 * * * * *', () => {
-        request(options, (error, response, body) => {
-            if (!error && response.statusCode == 200) {
-                let data = Iconv.decode(body, 'gb2312').toString(); // 打印google首页
-                if (data.indexOf('value="登录"') != -1) {
-                    console.log(chalk.red('you are off-line due to unknow reason, trying to reconnect'))
+        console.log('scheduleCronstyle:' + new Date());
+        begin = add(2000 * j++)
+        console.log(begin)
+        for (let i = parseInt(begin); i < parseInt(begin) + 2000; i++) {
+            console.log(url + add(i))
+            download(url + add(i), function (data) {
+                if (data) {
+                    // console.log(data);
+                    var $ = cheerio.load(data);
+                    // console.log($("#item_detail").find('dl').text())
+                    // console.log($('dl .booklist').text())
+                    var infos = [];
+                    let imgs = []
+                    let buf_infos = {};
+                    $("#item_detail").find('dl').each(function (i, elem) {
+                        infos[i] = $(this).text();
+                    });
 
-                    exec('curl http://202.204.48.66 -X POST -d "DDDDD=' + config.userName + '&upass=' + config.password + '&v6ip=&0MKKey=123456789"|iconv -f gb2312 -t utf-8', (err, stdout, stderr) => {
-                        if (err) {
-                            console.log(err);
-                            return;
-                        }
-                        console.log(chalk.green('success!'))
-                    })
-
-
-
-                } else if (data.indexOf('value="本机注销"') != -1) {
-                    console.log(chalk.yellow('already login'))
-
+                    //  console.log(infos);
+                    for (let i = 0; i < infos.length - 1; i++) {
+                        let buf = infos[i].split('\n\t\t\t\t\t\t\t\t\t')
+                        //   console.log(buf)
+                        buf_infos[buf[1]] = buf[2].split('\n')[0]
+                    }
+                    $("#sidebar_item").find('img').each(function (i, elem) {
+                        imgs[i] = $(this).attr('src');
+                    });
+                    //console.log(imgs)
+                    buf_infos["qr_code"] = imgs.pop();
+                    if (buf_infos["题名/责任者:"] !== 'undefined' && buf_infos["qr_code"] !== 'undefined') {
+                        console.log('tag', buf_infos)
+                        db.get('infos').insert(buf_infos)
+                    }
                 }
-            }
-        })
+            });
+        }
     });
 }
 
